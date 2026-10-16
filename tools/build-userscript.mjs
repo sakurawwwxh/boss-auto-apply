@@ -88,4 +88,4 @@ if (process.argv.includes('--check')) {
 
 mkdirSync(OUT_DIR, { recursive: true })
 writeFileSync(OUT_FILE, out)
-console.log('已生成 ' + OUT_FILE + '（' + out.length + ' 字节，' + out.split('\n').length + ' 行）')
+console.log('已生成 ' + OUT_FILE + '（' + Buffer.byteLength(out) + ' 字节，' + out.split('\n').length + ' 行）')
