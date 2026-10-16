@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>离线演练夹具 · BOSS 岗位列表页</title>
+    <style>
+      body { font: 14px/1.6 -apple-system, "Microsoft YaHei", sans-serif; margin: 0; padding: 20px; background: #f7f8fa; }
+      h1 { font-size: 16px; }
+      .job-list-wrapper { display: flex; flex-direction: column; gap: 10px; max-width: 680px; }
+      .job-card-wrapper { background: #fff; border: 1px solid #e5e6eb; border-radius: 10px; padding: 14px 16px; }
+      .job-card-body { display: flex; justify-content: space-between; }
+      .job-name { font-weight: 600; }
+      .salary { color: #fe574a; }
+      .company-name { color: #646a73; font-size: 13px; }
+      .info-public { color: #9aa1ab; font-size: 12px; margin-top: 6px; }
+      a { color: inherit; text-decoration: none; }
+      #env { font-size: 12px; color: #646a73; background: #eef0f3; border-radius: 6px; padding: 6px 10px; display: inline-block; margin-bottom: 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>离线演练夹具（模拟 BOSS 岗位列表页 + 假接口）</h1>
+    <div id="env"></div>
+    <div class="job-list-wrapper" id="list"></div>
+
+    <script>
+      // ---- 造一批假岗位卡片：href 格式与 BOSS 真实列表一致（只给 DOM 兜底路径用）----
+      const JOBS = [
+        { id: 'JOB_A', name: 'Java 后端开发工程师', company: '云启科技', salary: '25-40K·14薪', boss: '张女士' },
+        { id: 'JOB_B', name: 'Java 开发（外包驻场）', company: '某某人力', salary: '18-25K', boss: '李先生' },
+        { id: 'JOB_C', name: '高级后端工程师（Java）', company: '星辰网络', salary: '35-55K·15薪', boss: '王先生' },
+        { id: 'JOB_D', name: '销售代表', company: '某贸易公司', salary: '8-12K', boss: '赵女士' },
+        { id: 'JOB_E', name: 'Java 架构师', company: '某某科技', salary: '60-90K', boss: '猎头顾问Tom' },
+        { id: 'JOB_F', name: '后端开发（Go）', company: '溪流信息', salary: '面议', boss: '周先生' }
+      ]
+
+      document.getElementById('list').innerHTML = JOBS.map((j) => `
+        <div class="job-card-wrapper" data-job="${j.id}">
+          <div class="job-card-body">
+            <div class="job-card-left">
+              <a href="https://www.zhipin.com/job_detail/${j.id}.html?lid=LID_${j.id}&securityId=SEC_${j.id}">
+                <span class="job-name">${j.name}</span>
+                <span class="salary">${j.salary}</span>
+              </a>
+              <div class="company-name">${j.company}</div>
+              <div class="info-public">${j.boss} · 招聘者</div>
+            </div>
+            <button class="start-chat-btn">立即沟通</button>
+          </div>
+        </div>
+      `).join('')
+
+      let page = 1
+      const pager = document.createElement('div')
+      pager.className = 'options-pages'
+      pager.innerHTML = '<a ka="page-prev">上一页</a> <a ka="page-next">下一页</a>'
+      document.body.appendChild(pager)
+      pager.querySelector('[ka="page-next"]').addEventListener('click', () => {
+        if (page === 2) return
+        page = 2
+        document.getElementById('list').innerHTML = `
+          <div class="job-card-wrapper" data-job="JOB_G">
+            <div class="job-card-body">
+              <div class="job-card-left">
+                <a href="https://www.zhipin.com/job_detail/JOB_G.html?lid=LID_JOB_G&securityId=SEC_JOB_G">
+                  <span class="job-name">Java 后端（第二页）</span>
+                  <span class="salary">30-45K</span>
+                </a>
+                <div class="company-name">第二页公司</div>
+                <div class="info-public">孙先生 · 招聘者</div>
+              </div>
+              <button class="start-chat-btn">立即沟通</button>
+            </div>
+          </div>`
+      })
+    </script>
+
+    <script>
+      /* ==================== 环境桩 ====================
+         ?env=userscript → 油猴版：只挂 window.__BOSS_EXT__（没有 chrome.*）
+         默认            → 扩展版：挂 window.chrome.*
+      */
+      const ENV = new URLSearchParams(location.search).get('env') || 'extension'
+      const ENV_LABEL = {
+        extension: '扩展版（chrome.*）',
+        userscript: '油猴版桩（夹具自己提供的 __BOSS_EXT__）',
+        built: '油猴版构建产物（dist/boss-auto-apply.user.js，自带 shim）'
+      }
+      document.getElementById('env').textContent = '当前演练环境：' + (ENV_LABEL[ENV] || ENV)
+
+      // 存储落到 localStorage：这样「整页重载」之后配置/统计/会话都还在，
+      // 才能测「投递中途重载页面 → 自动续跑且不重复投」。
+      const LS_KEY = 'fixtureStore'
+      function readAll() {
+        try { return JSON.parse(window.localStorage.getItem(LS_KEY) || '{}') } catch (e) { return {} }
+      }
+      function writeAll(o) {
+        try { window.localStorage.setItem(LS_KEY, JSON.stringify(o)) } catch (e) {}
+      }
+      const STORE = readAll()
+      const CALLS = []
+      window.CALLS = CALLS
+      window.STORE = STORE
+      window.__fixtureStore = readAll
+      let listeners = []
+
+      async function storageGet(keys) {
+        const all = readAll()
+        const out = {}
+        const list = Array.isArray(keys) ? keys : keys == null ? Object.keys(all) : [keys]
+        for (const k of list) if (k in all) out[k] = JSON.parse(JSON.stringify(all[k]))
+        return out
+      }
+      async function storageSet(obj) {
+        const all = readAll()
+        const changes = {}
+        for (const k of Object.keys(obj)) {
+          changes[k] = { oldValue: all[k], newValue: obj[k] }
+          all[k] = JSON.parse(JSON.stringify(obj[k]))
+        }
+        writeAll(all)
+        setTimeout(() => listeners.forEach((fn) => fn(changes, 'local')), 0)
+        return undefined
+      }
+      async function storageRemove(key) {
+        const all = readAll()
+        const keys = Array.isArray(key) ? key : [key]
+        const changes = {}
+        for (const k of keys) {
+          changes[k] = { oldValue: all[k], newValue: undefined }
+          delete all[k]
+        }
+        writeAll(all)
+        setTimeout(() => listeners.forEach((fn) => fn(changes, 'local')), 0)
+        return undefined
+      }
+
+      const RELAY_CALLS = []
+      window.RELAY_CALLS = RELAY_CALLS
+
+      if (ENV === 'built') {
+        // 什么都不挂：让构建产物里的 shim 自己去实现 __BOSS_EXT__
+      } else if (ENV === 'userscript') {
+        window.__BOSS_EXT__ = {
+          storageGet,
+          storageSet,
+          storageRemove,
+          onStorageChanged: (fn) => listeners.push(fn),
+          getToken: async () => 'FAKE_TOKEN',
+          relayFetch: async (payload) => {
+            RELAY_CALLS.push(payload)
+            return { result: { blocked: true, reason: '油猴版没有中继通道' } }
+          },
+          openOptions: async () => {
+            window.OPENED_SETTINGS = (window.OPENED_SETTINGS || 0) + 1
+          }
+        }
+      } else {
+        window.chrome = {
+          storage: {
+            local: { get: storageGet, set: storageSet, remove: storageRemove },
+            onChanged: { addListener: (fn) => listeners.push(fn) }
+          },
+          runtime: {
+            sendMessage: async (msg) => {
+              if (msg.type === 'getToken') return { token: 'FAKE_TOKEN' }
+              if (msg.type === 'relayFetch') {
+                RELAY_CALLS.push(msg.payload)
+                return { result: { blocked: true, reason: '夹具没有中继' } }
+              }
+              if (msg.type === 'openOptions') {
+                window.OPENED_OPTIONS = true
+                return {}
+              }
+              return {}
+            }
+          }
+        }
+      }
+
+      /* ==================== 假接口 ==================== */
+
+      // 夹具两页：第 1 页 6 个，第 2 页 1 个，之后 hasMore=false
+      const LIST_PAGES = {
+        1: ['JOB_A', 'JOB_B', 'JOB_C', 'JOB_D', 'JOB_E', 'JOB_F'],
+        2: ['JOB_G']
+      }
+      const LIST_META = {
+        JOB_A: { salary: '25-40K·14薪', company: '云启科技', contact: false, goldHunter: '0' },
+        JOB_B: { salary: '18-25K', company: '某某人力', contact: false, goldHunter: '0' },
+        JOB_C: { salary: '35-55K·15薪', company: '星辰网络', contact: false, goldHunter: '0' },
+        JOB_D: { salary: '8-12K', company: '某贸易公司', contact: false, goldHunter: '0' },
+        JOB_E: { salary: '60-90K', company: '某某科技', contact: false, goldHunter: '1' },
+        JOB_F: { salary: '面议', company: '溪流信息', contact: false, goldHunter: '0' },
+        JOB_G: { salary: '30-45K', company: '第二页公司', contact: false, goldHunter: '0' }
+      }
+      const NAMES = {
+        JOB_A: 'Java 后端开发工程师', JOB_B: 'Java 开发（外包驻场）', JOB_C: '高级后端工程师（Java）',
+        JOB_D: '销售代表', JOB_E: 'Java 架构师', JOB_F: '后端开发（Go）', JOB_G: 'Java 后端（第二页）'
+      }
+      // 只有 card.json 才给的字段——用来验证「第一道不依赖它们」
+      const CARD_EXTRA = {
+        JOB_A: { activeTimeDesc: '今日活跃', postDescription: '负责服务端开发，熟悉 Spring Boot、MySQL。' },
+        JOB_B: { activeTimeDesc: '今日活跃', postDescription: '驻场开发。' },
+        JOB_C: { activeTimeDesc: '本周活跃', postDescription: '高并发系统。' },
+        JOB_D: { activeTimeDesc: '本月活跃', postDescription: '负责客户拜访与电话销售。' },
+        JOB_E: { activeTimeDesc: '今日活跃', postDescription: '架构设计。' },
+        JOB_F: { activeTimeDesc: '半年前活跃', postDescription: 'Go 服务。' },
+        JOB_G: { activeTimeDesc: '刚刚活跃', postDescription: '服务端。' }
+      }
+
+      function jsonRes(obj) {
+        return { ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(obj)) }
+      }
+      // 注意 JOB_A 与 JOB_D 刻意共用同一个 encryptBossId：用来验证
+      // 「同一个招聘者的多个岗位只打一次招呼」（防被 HR 当骚扰举报）
+      const BOSS_OF = {
+        JOB_A: 'BOSS_SHARED', JOB_B: 'BOSS_B', JOB_C: 'BOSS_C',
+        JOB_D: 'BOSS_SHARED', JOB_E: 'BOSS_E', JOB_F: 'BOSS_F', JOB_G: 'BOSS_G'
+      }
+
+      function listItem(id) {
+        const m = LIST_META[id]
+        return {
+          encryptJobId: id, securityId: 'SEC_' + id, lid: 'LID_' + id, encryptBossId: BOSS_OF[id],
+          jobName: NAMES[id], brandName: m.company, salaryDesc: m.salary,
+          contact: m.contact, goldHunter: m.goldHunter, jobValidStatus: '1', cityName: '北京'
+        }
+      }
+
+      window.fetch = function (url, init) {
+        const u = String(url)
+        const method = (init && init.method) || 'GET'
+        CALLS.push({ url: u, method })
+
+        if (/search\/joblist\.json|recommend\/job\/list\.json/.test(u)) {
+          const pageNo = Number((u.match(/[?&]page=(\d+)/) || [])[1] || 1)
+          const ids = LIST_PAGES[pageNo] || []
+          return Promise.resolve(
+            jsonRes({ code: 0, message: 'Success', zpData: { hasMore: !!LIST_PAGES[pageNo + 1], jobList: ids.map(listItem) } })
+          )
+        }
+
+        if (u.indexOf('/wapi/zpgeek/job/card.json') !== -1) {
+          const id = (u.match(/securityId=SEC_([A-Z_]+)/) || [])[1] || ''
+          if (!LIST_META[id]) return Promise.resolve(jsonRes({ code: 1, message: '岗位不存在' }))
+          return Promise.resolve(
+            jsonRes({
+              code: 0,
+              message: 'Success',
+              zpData: { jobCard: Object.assign({}, listItem(id), CARD_EXTRA[id], { friendStatus: 0 }) }
+            })
+          )
+        }
+
+        if (u.indexOf('/wapi/zpgeek/friend/add.json') !== -1) {
+          CALLS[CALLS.length - 1].applied = true
+          return Promise.resolve(jsonRes({ code: 0, message: 'Success', zpData: {} }))
+        }
+
+        return Promise.resolve({ ok: false, status: 404, text: () => Promise.resolve('not stubbed: ' + u) })
+      }
+    </script>
+
+    <script>
+      // built 环境只加载构建产物（它自带 shim + 三段源码），其余环境加载源码
+      const files =
+        ENV === 'built'
+          ? ['/dist/boss-auto-apply.user.js']
+          : ['/src/shared/defaults.js', '/src/content/filters.js', '/src/content/panel.js']
+      files.forEach((f) => {
+        const el = document.createElement('script')
+        el.src = f
+        // 关键：动态插入的 script 默认 async=true，执行顺序不保证。
+        // 不设 false 的话 panel.js 可能比 defaults.js 先执行，拿不到依赖直接 return，
+        // 表现就是「面板不出现」，而且完全没有报错。
+        el.async = false
+        document.head.appendChild(el)
+      })
+    </script>
+  </body>
+</html>

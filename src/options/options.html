@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>BOSS 自动投递助手 · 设置</title>
+    <style>
+      :root {
+        --bg: #f5f6f7;
+        --card: #fff;
+        --text: #1f2329;
+        --muted: #646a73;
+        --line: #e5e6eb;
+        --brand: #00a6a7;
+        --danger: #c0392b;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #17191c;
+          --card: #22262b;
+          --text: #e6e8ea;
+          --muted: #9aa1ab;
+          --line: #333941;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 28px 20px 60px;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+      main { max-width: 760px; margin: 0 auto; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+      section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 18px 20px;
+        margin-bottom: 16px;
+      }
+      h2 { font-size: 15px; margin: 0 0 14px; }
+      .field { margin-bottom: 14px; }
+      .field:last-child { margin-bottom: 0; }
+      label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+      .hint { font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 4px; }
+      input[type="text"], input[type="number"] {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+      }
+      input:focus { outline: 2px solid var(--brand); outline-offset: -1px; border-color: var(--brand); }
+      .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .check { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+      .check input { margin-top: 3px; }
+      .check label { font-weight: 400; margin: 0; }
+      .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+      button {
+        font: inherit;
+        font-size: 13px;
+        padding: 9px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--text);
+        cursor: pointer;
+      }
+      button:hover { border-color: var(--brand); color: var(--brand); }
+      button.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+      button.primary:hover { background: #00908f; color: #fff; }
+      button.danger:hover { border-color: var(--danger); color: var(--danger); }
+      .sticky {
+        position: sticky;
+        bottom: 0;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 12px 0;
+        background: linear-gradient(transparent, var(--bg) 40%);
+      }
+      .saved { color: var(--brand); font-size: 13px; opacity: 0; transition: opacity .2s; }
+      .saved.show { opacity: 1; }
+      .notice {
+        font-size: 12px;
+        color: #a8621a;
+        background: #fff7e6;
+        border: 1px solid #ffe0a3;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 16px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .notice { background: #2f2a1d; border-color: #4d4327; color: #e8c98a; }
+      }
+      code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>BOSS 自动投递助手</h1>
+      <div class="sub">所有配置只存在这台电脑的浏览器里，不会发到任何服务器。</div>
+
+      <div class="notice">
+        <b>投递用的招呼语</b>是 BOSS 直聘里你账号自己的「默认打招呼语」。想改内容，去 BOSS 直聘 →
+        我的 → 设置 → 打招呼语 里改，插件不覆盖它。
+      </div>
+
+      <section>
+        <h2>运行方式</h2>
+        <div class="check">
+          <input type="checkbox" id="dryRun" />
+          <label for="dryRun">
+            试运行（推荐先开着）
+            <div class="hint">只走筛选和日志，不真的发起沟通。确认筛选条件符合预期后再关掉。</div>
+          </label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="autoConfirm120" />
+          <label for="autoConfirm120">
+            自动确认「今日已与 120 位 BOSS 沟通」提示并继续
+            <div class="hint">
+              不勾选的话，遇到这个提示就停下等你手动处理。BOSS 侧的硬上限是 150 位/天。
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <section>
+        <h2>岗位筛选</h2>
+        <div class="field">
+          <label for="mustKeywords">岗位名必须包含（逗号分隔，留空 = 不限）</label>
+          <input type="text" id="mustKeywords" placeholder="Java,后端,服务端" />
+          <div class="hint">命中任意一个即可。</div>
+        </div>
+        <div class="field">
+          <label for="excludeKeywords">排除词 · 岗位名或公司名（逗号分隔）</label>
+          <input type="text" id="excludeKeywords" placeholder="外包,驻场,实习,销售" />
+        </div>
+        <div class="field">
+          <label for="excludeCompanies">排除公司（逗号分隔）</label>
+          <input type="text" id="excludeCompanies" placeholder="某某人力,某某科技" />
+        </div>
+        <div class="field">
+          <label for="excludeInJd">排除词 · 岗位描述正文（逗号分隔）</label>
+          <input type="text" id="excludeInJd" placeholder="销售,电话,地推" />
+          <div class="hint">JD 正文里有这些词就跳过，用来挡挂羊头卖狗肉的岗位。</div>
+        </div>
+        <div class="field">
+          <label for="cities">城市（逗号分隔，留空 = 不限）</label>
+          <input type="text" id="cities" placeholder="北京,杭州" />
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="salaryMin">薪资下限（K/月，0 = 不限）</label>
+            <input type="number" id="salaryMin" min="0" step="1" />
+          </div>
+          <div class="field">
+            <label for="salaryMax">薪资上限（K/月，0 = 不限）</label>
+            <input type="number" id="salaryMax" min="0" step="1" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="activeWithinDays">只投「最近 N 天内活跃」的 HR（0 = 不限）</label>
+          <input type="number" id="activeWithinDays" min="0" step="1" />
+          <div class="hint">活跃度低的 HR 基本不会回。设 3 就是只看 3 日内活跃的。</div>
+        </div>
+        <div class="field">
+          <label for="sameHrDays">同一个招聘者多少天内不重复打招呼（0 = 只在本轮内去重）</label>
+          <input type="number" id="sameHrDays" min="0" max="365" step="1" />
+          <div class="hint">
+            同一个 HR 常挂着好几个岗位。只按岗位去重的话，他会连收好几条一样的招呼语 ——
+            这是最容易被当成骚扰举报的形态。默认 30 天。
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="skipContacted" />
+          <label for="skipContacted">跳过已经沟通过的岗位</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="skipSameHr" />
+          <label for="skipSameHr">同一个招聘者不重复打招呼（推荐开启）</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="excludeHeadhunter" />
+          <label for="excludeHeadhunter">跳过猎头发布的岗位</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="includeInJd" />
+          <label for="includeInJd">
+            「岗位名必须包含」的关键词也拿去匹配 JD 正文
+            <div class="hint">会更宽一点，适合岗位名写法五花八门的时候。</div>
+          </label>
+        </div>
+      </section>
+
+      <section>
+        <h2>节奏与上限</h2>
+        <div class="two">
+          <div class="field">
+            <label for="dailyMax">每日最多投递（个）</label>
+            <input type="number" id="dailyMax" min="1" max="500" step="1" />
+            <div class="hint">这是你自己设的保险，别贴到 BOSS 的 120。</div>
+          </div>
+          <div class="field">
+            <label for="maxPages">最多自动翻页（页）</label>
+            <input type="number" id="maxPages" min="1" max="200" step="1" />
+          </div>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="delayMinMs">每次投递最小间隔（毫秒）</label>
+            <input type="number" id="delayMinMs" min="800" step="100" />
+          </div>
+          <div class="field">
+            <label for="delayMaxMs">每次投递最大间隔（毫秒）</label>
+            <input type="number" id="delayMaxMs" min="800" step="100" />
+          </div>
+        </div>
+        <div class="hint">间隔会在区间内随机取值。默认 2–5 秒，别调到几百毫秒。</div>
+      </section>
+
+      <section>
+        <h2>配置备份</h2>
+        <div class="row">
+          <button id="exportBtn">导出 JSON</button>
+          <button id="importBtn">导入 JSON</button>
+          <input type="file" id="importFile" accept="application/json" hidden />
+        </div>
+      </section>
+
+      <div class="sticky">
+        <button class="primary" id="saveBtn">保存</button>
+        <button class="danger" id="resetBtn">恢复默认</button>
+        <span class="saved" id="savedTip">已保存</span>
+      </div>
+    </main>
+
+    <script src="../shared/defaults.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

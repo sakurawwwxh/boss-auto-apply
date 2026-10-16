@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # 零依赖，不需要 npm install
+      - name: 纯逻辑用例
+        run: npm test
+      - name: 产物与源码是否一致（防止发旧逻辑）
+        run: npm run check:dist
+      - name: 语法检查
+        run: |
+          for f in src/background.js src/shared/defaults.js src/content/filters.js \
+                   src/content/panel.js src/options/options.js src/popup/popup.js \
+                   tools/userscript-shim.js tools/build-userscript.mjs \
+                   tools/selftest.cjs tools/serve-fixture.cjs; do
+            node --check "$f"
+          done

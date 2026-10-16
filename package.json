@@ -1,0 +1,13 @@
+{
+  "name": "boss-auto-apply",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BOSS 直聘自动投递 Chrome 扩展（纯本地、可试运行）",
+  "scripts": {
+    "test": "node tools/selftest.cjs",
+    "build:userscript": "node tools/build-userscript.mjs",
+    "check:dist": "node tools/build-userscript.mjs --check",
+    "icons": "node tools/make-icons.mjs",
+    "fixture": "node tools/serve-fixture.cjs"
+  }
+}
