@@ -82,7 +82,7 @@ if (process.argv.includes('--check')) {
     console.error('  跑 npm run build:userscript 重新生成后再发布。')
     process.exit(1)
   }
-  console.log('✓ 产物与源码一致（' + out.length + ' 字节）')
+  console.log('✓ 产物与源码一致（' + Buffer.byteLength(out) + ' 字节）')
   process.exit(0)
 }
 
